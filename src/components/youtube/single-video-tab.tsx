@@ -120,7 +120,9 @@ export const SingleVideoTab = () => {
     } else {
       args.push(
         "-f",
-        `bestvideo[height<=${quality}][ext=${format}]+bestaudio[ext=m4a]/bestvideo[height<=${quality}]+bestaudio/best`,
+        // Prefer a single-file (progressive) download first to avoid separate audio/video files.
+        // If unavailable, fall back to bestvideo+bestaudio (requires ffmpeg to merge).
+        `best[height<=${quality}][ext=${format}]/best[height<=${quality}]/best/bestvideo[height<=${quality}][ext=${format}]+bestaudio[ext=m4a]/bestvideo[height<=${quality}]+bestaudio/best`,
       );
       args.push("--merge-output-format", format);
     }
