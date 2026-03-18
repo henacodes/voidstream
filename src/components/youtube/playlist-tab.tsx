@@ -33,10 +33,18 @@ export const PlaylistTab = () => {
     folder,
     quality,
     isAudioOnly,
+    downloadCaptions,
+    autoCaptions,
+    captionLanguages,
+    captionFormat,
     isDownloading,
     setDownloading,
     setQuality,
     setAudioOnly,
+    setDownloadCaptions,
+    setAutoCaptions,
+    setCaptionLanguages,
+    setCaptionFormat,
   } = useDownloaderStore();
 
   const { addNotification } = useNotificationStore();
@@ -118,9 +126,17 @@ export const PlaylistTab = () => {
       "--playlist-items",
       itemsStr,
       "--newline",
+      "--windows-filenames",
       "-o",
       `${folder}/%(playlist_title)s/%(title)s.%(ext)s`,
     ];
+
+    if (downloadCaptions) {
+      args.push("--write-subs");
+      if (autoCaptions) args.push("--write-auto-subs");
+      if (captionLanguages.trim()) args.push("--sub-langs", captionLanguages);
+      args.push("--sub-format", captionFormat);
+    }
 
     if (isAudioOnly) {
       args.push("-x", "--audio-format", "mp3");
@@ -261,6 +277,54 @@ export const PlaylistTab = () => {
                   checked={isAudioOnly}
                   onCheckedChange={setAudioOnly}
                   disabled={isDownloading}
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-md border border-white/5">
+                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                    Download Captions
+                  </span>
+                  <Switch
+                    checked={downloadCaptions}
+                    onCheckedChange={setDownloadCaptions}
+                    disabled={isDownloading}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-md border border-white/5">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                      Auto Captions
+                    </span>
+                    <Switch
+                      checked={autoCaptions}
+                      onCheckedChange={setAutoCaptions}
+                      disabled={isDownloading || !downloadCaptions}
+                    />
+                  </div>
+
+                  <Select
+                    value={captionFormat}
+                    onValueChange={(v) => setCaptionFormat(v as "vtt" | "srt")}
+                    disabled={isDownloading || !downloadCaptions}
+                  >
+                    <SelectTrigger className="bg-background/50 border-none h-11 text-xs font-bold uppercase">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vtt">VTT</SelectItem>
+                      <SelectItem value="srt">SRT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Input
+                  value={captionLanguages}
+                  onChange={(e) => setCaptionLanguages(e.target.value)}
+                  disabled={isDownloading || !downloadCaptions}
+                  placeholder="Subtitle languages (e.g. en.*,en,es)"
+                  className="h-11 bg-background/50 border border-white/5"
                 />
               </div>
             </div>
