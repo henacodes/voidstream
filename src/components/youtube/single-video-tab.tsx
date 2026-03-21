@@ -31,6 +31,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Helpers
 import { parsePercent } from "@/lib/helpers";
+import { buildYtDlpDownloadArgs } from "@/lib/ytdlp";
 
 export const SingleVideoTab = () => {
   // Global State
@@ -38,10 +39,18 @@ export const SingleVideoTab = () => {
     folder,
     quality,
     isAudioOnly,
+    downloadCaptions,
+    autoCaptions,
+    captionLanguages,
+    captionFormat,
     isDownloading,
     setDownloading,
     setQuality,
     setAudioOnly,
+    setDownloadCaptions,
+    setAutoCaptions,
+    setCaptionLanguages,
+    setCaptionFormat,
   } = useDownloaderStore();
 
   const { addNotification } = useNotificationStore();
@@ -91,23 +100,20 @@ export const SingleVideoTab = () => {
     setDownloading(true, metadata?.title || "Video");
     setProgressLine("Initializing Engine...");
 
-    const args = [
+    const args = buildYtDlpDownloadArgs({
       url,
-      "--no-playlist",
-      "--newline",
-      "-o",
-      `${folder}/%(title)s.%(ext)s`,
-    ];
-
-    if (isAudioOnly) {
-      args.push("-x", "--audio-format", "mp3");
-    } else {
-      args.push(
-        "-f",
-        `bestvideo[height<=${quality}][ext=${format}]+bestaudio[ext=m4a]/bestvideo[height<=${quality}]+bestaudio/best`,
-      );
-      args.push("--merge-output-format", format);
-    }
+      outputTemplate: `${folder}/%(title)s.%(ext)s`,
+      quality,
+      format,
+      isAudioOnly,
+      noPlaylist: true,
+      captions: {
+        enabled: downloadCaptions,
+        autoCaptions,
+        languages: captionLanguages,
+        format: captionFormat,
+      },
+    });
 
     const cmd = Command.sidecar("binaries/yt-dlp", args);
 
@@ -240,6 +246,58 @@ export const SingleVideoTab = () => {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Captions */}
+            <div className="space-y-3">
+              <label className="text-[9px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                <Settings2 size={10} /> Captions
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between h-10 px-4 bg-background/40 border-none rounded-none">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Download
+                  </span>
+                  <Switch
+                    checked={downloadCaptions}
+                    onCheckedChange={setDownloadCaptions}
+                    disabled={isDownloading}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between h-10 px-4 bg-background/40 border-none rounded-none">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Auto
+                  </span>
+                  <Switch
+                    checked={autoCaptions}
+                    onCheckedChange={setAutoCaptions}
+                    disabled={isDownloading || !downloadCaptions}
+                  />
+                </div>
+
+                <Select
+                  value={captionFormat}
+                  onValueChange={(v) => setCaptionFormat(v as "vtt" | "srt")}
+                  disabled={isDownloading || !downloadCaptions}
+                >
+                  <SelectTrigger className="bg-background/40 border-none h-10 font-bold uppercase rounded-none shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none">
+                    <SelectItem value="vtt">VTT</SelectItem>
+                    <SelectItem value="srt">SRT</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Input
+                value={captionLanguages}
+                onChange={(e) => setCaptionLanguages(e.target.value)}
+                disabled={isDownloading || !downloadCaptions}
+                placeholder="Subtitle languages (e.g. en.*,en,es)"
+                className="h-10 bg-secondary/20 border-primary/10 transition-all focus:bg-secondary/40 rounded-none shadow-none"
+              />
             </div>
 
             <div className="space-y-4 pt-2">

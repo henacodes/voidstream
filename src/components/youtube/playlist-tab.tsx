@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 
 // Helpers
 import { parsePercent } from "@/lib/helpers";
+import { buildYtDlpDownloadArgs } from "@/lib/ytdlp";
 
 export const PlaylistTab = () => {
   // Global State from Zustand
@@ -33,10 +34,18 @@ export const PlaylistTab = () => {
     folder,
     quality,
     isAudioOnly,
+    downloadCaptions,
+    autoCaptions,
+    captionLanguages,
+    captionFormat,
     isDownloading,
     setDownloading,
     setQuality,
     setAudioOnly,
+    setDownloadCaptions,
+    setAutoCaptions,
+    setCaptionLanguages,
+    setCaptionFormat,
   } = useDownloaderStore();
 
   const { addNotification } = useNotificationStore();
@@ -113,25 +122,20 @@ export const PlaylistTab = () => {
       .map((i) => i + 1)
       .join(",");
 
-    let args = [
+    const args = buildYtDlpDownloadArgs({
       url,
-      "--playlist-items",
-      itemsStr,
-      "--newline",
-      "-o",
-      `${folder}/%(playlist_title)s/%(title)s.%(ext)s`,
-    ];
-
-    if (isAudioOnly) {
-      args.push("-x", "--audio-format", "mp3");
-    } else {
-      // Logic: Prefer user-selected format/quality but allow merging
-      args.push(
-        "-f",
-        `bestvideo[height<=${quality}][ext=${format}]+bestaudio[ext=m4a]/bestvideo[height<=${quality}]+bestaudio/best`,
-      );
-      args.push("--merge-output-format", format);
-    }
+      outputTemplate: `${folder}/%(playlist_title)s/%(title)s.%(ext)s`,
+      quality,
+      format,
+      isAudioOnly,
+      playlistItems: itemsStr,
+      captions: {
+        enabled: downloadCaptions,
+        autoCaptions,
+        languages: captionLanguages,
+        format: captionFormat,
+      },
+    });
 
     const cmd = Command.sidecar("binaries/yt-dlp", args);
 
@@ -261,6 +265,54 @@ export const PlaylistTab = () => {
                   checked={isAudioOnly}
                   onCheckedChange={setAudioOnly}
                   disabled={isDownloading}
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-md border border-white/5">
+                  <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                    Download Captions
+                  </span>
+                  <Switch
+                    checked={downloadCaptions}
+                    onCheckedChange={setDownloadCaptions}
+                    disabled={isDownloading}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-md border border-white/5">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                      Auto Captions
+                    </span>
+                    <Switch
+                      checked={autoCaptions}
+                      onCheckedChange={setAutoCaptions}
+                      disabled={isDownloading || !downloadCaptions}
+                    />
+                  </div>
+
+                  <Select
+                    value={captionFormat}
+                    onValueChange={(v) => setCaptionFormat(v as "vtt" | "srt")}
+                    disabled={isDownloading || !downloadCaptions}
+                  >
+                    <SelectTrigger className="bg-background/50 border-none h-11 text-xs font-bold uppercase">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vtt">VTT</SelectItem>
+                      <SelectItem value="srt">SRT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Input
+                  value={captionLanguages}
+                  onChange={(e) => setCaptionLanguages(e.target.value)}
+                  disabled={isDownloading || !downloadCaptions}
+                  placeholder="Subtitle languages (e.g. en.*,en,es)"
+                  className="h-11 bg-background/50 border border-white/5"
                 />
               </div>
             </div>
