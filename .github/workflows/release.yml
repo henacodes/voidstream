@@ -27,7 +27,7 @@ jobs:
       - name: Add yt-dlp sidecar (Windows)
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path src-tauri/binaries | Out-Null
+          New-Item -ItemType Directory -Force -Path "src-tauri/binaries" | Out-Null
           Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "src-tauri/binaries/yt-dlp-x86_64-pc-windows-msvc.exe"
 
       - name: Install deps

@@ -8,7 +8,7 @@ import {
   Settings2,
   Terminal,
 } from "lucide-react";
-import { Command, Child } from "@tauri-apps/plugin-shell";
+import { Child } from "@tauri-apps/plugin-shell";
 
 // Store Hooks
 import { useDownloaderStore } from "@/stores/useDownloadStore";
@@ -31,7 +31,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Helpers
 import { parsePercent } from "@/lib/helpers";
-import { buildYtDlpDownloadArgs } from "@/lib/ytdlp";
+import {
+  buildYtDlpDownloadArgs,
+  createYtDlpCommand,
+  ensureYtDlpReady,
+  explainYtDlpError,
+  formatDurationLabel,
+} from "@/lib/ytdlp";
 
 export const SingleVideoTab = () => {
   // Global State
@@ -117,22 +123,34 @@ export const SingleVideoTab = () => {
     setIsFetching(true);
     setMetadata(null);
     try {
-      const cmd = Command.sidecar("binaries/yt-dlp", [
-        "--print",
-        "%(title)s\n%(uploader)s\n%(thumbnail)s\n%(duration_string)s\n%(view_count)s",
+      await ensureYtDlpReady();
+
+      const cmd = createYtDlpCommand([
+        "--dump-single-json",
         "--no-playlist",
+        "--skip-download",
+        "--no-warnings",
         url,
       ]);
       const out = await cmd.execute();
 
       if (out.code === 0) {
-        const [title, uploader, thumb, dur, views] = out.stdout.split("\n");
-        setMetadata({ title, uploader, thumb, dur, views });
+        const data = JSON.parse(out.stdout);
+        setMetadata({
+          title: data.title,
+          uploader: data.uploader,
+          thumb: data.thumbnail,
+          dur: data.duration_string || formatDurationLabel(data.duration),
+          views: data.view_count,
+        });
       } else {
-        addNotification("Failed to fetch video details", "error");
+        const errMsg = out.stderr?.trim() || `Exit code: ${out.code}`;
+        addNotification(`yt-dlp error: ${errMsg.slice(0, 120)}`, "error");
+        console.error("[fetchInfo] yt-dlp stderr:", out.stderr);
       }
-    } catch (e) {
-      addNotification("Process error while fetching", "error");
+    } catch (e: unknown) {
+      addNotification(explainYtDlpError(e).slice(0, 120), "error");
+      console.error("[fetchInfo] sidecar threw:", e);
     } finally {
       setIsFetching(false);
     }
@@ -140,6 +158,13 @@ export const SingleVideoTab = () => {
 
   const handleDownload = async () => {
     if (!folder) return addNotification("Save location not set", "error");
+
+    try {
+      await ensureYtDlpReady();
+    } catch (e: unknown) {
+      addNotification(explainYtDlpError(e).slice(0, 120), "error");
+      return;
+    }
 
     setDownloading(true, metadata?.title || "Video");
     setProgressLine("Initializing Engine...");
@@ -159,7 +184,7 @@ export const SingleVideoTab = () => {
       },
     });
 
-    const cmd = Command.sidecar("binaries/yt-dlp", args);
+    const cmd = createYtDlpCommand(args);
 
     cmd.stdout.on("data", (line) => {
       if (line.includes("%")) setProgressLine(line);

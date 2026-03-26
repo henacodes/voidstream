@@ -76,8 +76,23 @@ if ($missing.Count -gt 0) {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $sidecarDir = Join-Path $repoRoot "src-tauri\\binaries"
 $sidecarPath = Join-Path $sidecarDir "yt-dlp-x86_64-pc-windows-msvc.exe"
+$legacySidecarPath = Join-Path $repoRoot "src-tauri\\yt-dlp-x86_64-pc-windows-msvc.exe"
 
 New-Item -ItemType Directory -Force -Path $sidecarDir | Out-Null
+
+if ((-not (Test-Path $sidecarPath)) -and (Test-Path $legacySidecarPath)) {
+  Move-Item -Force -Path $legacySidecarPath -Destination $sidecarPath
+  Write-Host "Moved legacy sidecar into src-tauri\\binaries" -ForegroundColor Yellow
+}
+
+$unexpectedExe = Get-ChildItem -Path $sidecarDir -Filter "*.exe" |
+  Where-Object { $_.Name -notlike "yt-dlp-*" }
+if ($unexpectedExe) {
+  Write-Host ""
+  Write-Host "Unexpected executables found in src-tauri\\binaries:" -ForegroundColor Yellow
+  $unexpectedExe | ForEach-Object { Write-Host "  - $($_.Name)" -ForegroundColor Yellow }
+  Write-Host "These files are not used by Command.sidecar(\"binaries/yt-dlp\")." -ForegroundColor Yellow
+}
 
 if (-not (Test-Path $sidecarPath)) {
   Write-Host ""
@@ -88,6 +103,9 @@ if (-not (Test-Path $sidecarPath)) {
   Write-Host ""
   Write-Host "yt-dlp sidecar present: $sidecarPath" -ForegroundColor Green
 }
+
+$sidecarHash = Get-FileHash -Algorithm SHA256 -Path $sidecarPath
+Write-Host "SHA256: $($sidecarHash.Hash)" -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "OK: prerequisites look good." -ForegroundColor Green

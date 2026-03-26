@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { Download, Loader2, Terminal, Music, Settings2 } from "lucide-react";
-import { Command, Child } from "@tauri-apps/plugin-shell";
+import { Child } from "@tauri-apps/plugin-shell";
 
 // Store Hooks
 import { useDownloaderStore } from "@/stores/useDownloadStore";
@@ -26,7 +26,12 @@ import { Switch } from "@/components/ui/switch";
 
 // Helpers
 import { parsePercent } from "@/lib/helpers";
-import { buildYtDlpDownloadArgs } from "@/lib/ytdlp";
+import {
+  buildYtDlpDownloadArgs,
+  createYtDlpCommand,
+  ensureYtDlpReady,
+  explainYtDlpError,
+} from "@/lib/ytdlp";
 
 export const PlaylistTab = () => {
   // Global State from Zustand
@@ -119,7 +124,9 @@ export const PlaylistTab = () => {
     setMeta(null);
 
     try {
-      const listCmd = Command.sidecar("binaries/yt-dlp", [
+      await ensureYtDlpReady();
+
+      const listCmd = createYtDlpCommand([
         "--flat-playlist",
         "--print",
         "%(playlist_title)s\n%(uploader)s\n%(title)s\n%(duration_string)s\n%(thumbnails.-1.url)s",
@@ -127,6 +134,10 @@ export const PlaylistTab = () => {
       ]);
 
       const out = await listCmd.execute();
+      if (out.code !== 0) {
+        throw new Error(out.stderr?.trim() || `Exit code ${out.code}`);
+      }
+
       const lines = out.stdout.trim().split("\n");
 
       if (lines.length < 3) throw new Error("Could not parse playlist");
@@ -151,8 +162,9 @@ export const PlaylistTab = () => {
 
       setItems(videoList);
       setSelected(new Set(videoList.map((_, i) => i)));
-    } catch (e) {
-      addNotification("Failed to fetch playlist metadata", "error");
+    } catch (e: unknown) {
+      addNotification(explainYtDlpError(e).slice(0, 120), "error");
+      console.error("[fetchPlaylist] threw:", e);
     } finally {
       setIsFetching(false);
     }
@@ -160,6 +172,13 @@ export const PlaylistTab = () => {
 
   const startDownload = async () => {
     if (!folder) return addNotification("Target folder not set!", "error");
+
+    try {
+      await ensureYtDlpReady();
+    } catch (e: unknown) {
+      addNotification(explainYtDlpError(e).slice(0, 120), "error");
+      return;
+    }
 
     setDownloading(true, meta?.title);
     const itemsStr = Array.from(selected)
@@ -181,7 +200,7 @@ export const PlaylistTab = () => {
       },
     });
 
-    const cmd = Command.sidecar("binaries/yt-dlp", args);
+    const cmd = createYtDlpCommand(args);
 
     cmd.stdout.on("data", (line) => {
       if (line.includes("%")) setProgressLine(line);
