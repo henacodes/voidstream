@@ -265,7 +265,7 @@ export const PlaylistTab = () => {
             </Card>
 
             {/* Config Grid */}
-            <div className="grid grid-cols-1 gap-4 p-4 bg-secondary/10 rounded-2xl border border-white/5">
+            <div className="grid grid-cols-1 gap-4 p-4 bg-secondary/10 rounded-none border border-white/5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase text-muted-foreground ml-1 flex items-center gap-1">
@@ -312,7 +312,7 @@ export const PlaylistTab = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-md border border-white/5">
+              <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-none border border-white/5">
                 <div className="flex items-center gap-2">
                   <Music
                     size={14}
@@ -332,7 +332,7 @@ export const PlaylistTab = () => {
               </div>
 
               <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-md border border-white/5">
+                <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-none border border-white/5">
                   <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                     Download Captions
                   </span>
@@ -344,7 +344,7 @@ export const PlaylistTab = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-md border border-white/5">
+                  <div className="flex items-center justify-between h-11 px-4 bg-background/50 rounded-none border border-white/5">
                     <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                       Auto Captions
                     </span>
@@ -384,7 +384,7 @@ export const PlaylistTab = () => {
 
         {/* Terminal Progress Alert */}
         {isDownloading && (
-          <Alert className="bg-black border-primary/20 text-primary font-mono  rounded-xl border">
+          <Alert className="bg-black border-primary/20 text-primary font-mono rounded-none border">
             <Terminal className="h-4 w-4 text-primary! animate-pulse" />
             <AlertTitle className="text-[10px] tracking-[0.2em] font-black opacity-50 mb-4">
               VOID_SHELL_ACTIVE_QUEUE
@@ -433,7 +433,7 @@ export const PlaylistTab = () => {
 
       {/* RIGHT COLUMN: Video Queue */}
       <div className="lg:col-span-7">
-        <Card className="border-none bg-secondary/5 rounded-3xl overflow-hidden backdrop-blur-sm border border-white/5">
+        <Card className="border-none bg-secondary/5 rounded-none overflow-hidden backdrop-blur-sm border border-white/5">
           <div className="p-5 bg-secondary/10 flex justify-between items-center border-b border-white/5">
             <div className="flex items-center gap-3">
               <Checkbox
@@ -461,7 +461,7 @@ export const PlaylistTab = () => {
               {items.map((item, i) => (
                 <div
                   key={i}
-                  className={`flex items-center gap-4 p-2.5 rounded-2xl transition-all group border border-transparent ${
+                  className={`flex items-center gap-4 p-2.5 rounded-none transition-all group border border-transparent ${
                     selected.has(i)
                       ? "bg-secondary/20 border-white/5"
                       : "opacity-30 grayscale blur-[1px] hover:blur-0"
@@ -476,7 +476,7 @@ export const PlaylistTab = () => {
                     }}
                   />
 
-                  <div className="relative w-24 h-14 rounded-xl overflow-hidden shrink-0 shadow-lg">
+                  <div className="relative w-24 h-14 rounded-none overflow-hidden shrink-0 shadow-lg">
                     <img
                       src={item.thumb}
                       alt="min"
@@ -498,7 +498,7 @@ export const PlaylistTab = () => {
 
                   {progressLine.includes(item.title) && (
                     <div className="flex items-center gap-2 pr-2 animate-pulse">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <div className="h-1.5 w-1.5 rounded-none bg-primary" />
                       <Loader2 className="w-3 h-3 text-primary animate-spin" />
                     </div>
                   )}
