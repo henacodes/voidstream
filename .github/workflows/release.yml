@@ -34,9 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build app
-        env:
-          TAURI_BUNDLE_TARGET: "nsis,msi"
-        run: npm run tauri build
+        run: npm run tauri build -- --bundles nsis,msi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -86,14 +84,11 @@ jobs:
         run: npm ci
 
       - name: Build app
-        env:
-          TAURI_BUNDLE_TARGET: "deb,rpm"
-        run: npm run tauri build
+        run: npm run tauri build -- --bundles deb,rpm
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/appimage/*.AppImage
-            src-tauri/target/release/bundle/appimage/*.zsync
+            src-tauri/target/release/bundle/rpm/*.rpm
