@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import { FolderOpen } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,26 @@ import { useDownloaderStore } from "@/stores/useDownloadStore";
 export const YoutubeDownloader = () => {
   // Use store actions and state instead of local useState
   const { folder, setFolder } = useDownloaderStore();
+  const hasCleanedUpRef = useRef(false);
+
+  useEffect(() => {
+    if (hasCleanedUpRef.current) return;
+
+    const cleanupKey = "voidstream-stale-ytdl-cleanup";
+    const alreadyCleanedUp = sessionStorage.getItem(cleanupKey) === "true";
+
+    if (alreadyCleanedUp) {
+      hasCleanedUpRef.current = true;
+      return;
+    }
+
+    hasCleanedUpRef.current = true;
+    sessionStorage.setItem(cleanupKey, "true");
+
+    void invoke("kill_stale_ytdl_processes").catch(() => {
+      sessionStorage.removeItem(cleanupKey);
+    });
+  }, []);
 
   const handlePickFolder = async () => {
     const selected = await open({
@@ -57,7 +79,7 @@ export const YoutubeDownloader = () => {
 
           <Tabs defaultValue="single" className="w-full">
             <div className="flex justify-center mb-8">
-              <TabsList className="grid w-full grid-cols-2 max-w-[400px] bg-secondary/50 p-1 h-12 ">
+              <TabsList className="grid w-full grid-cols-2 max-w-100 bg-secondary/50 p-1 h-12 ">
                 <TabsTrigger
                   value="single"
                   className="font-bold  data-[state=active]:bg-background"

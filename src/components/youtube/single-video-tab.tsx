@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   Download,
   Link as LinkIcon,
@@ -64,6 +64,50 @@ export const SingleVideoTab = () => {
   const childRef = useRef<Child | null>(null);
 
   const percent = useMemo(() => parsePercent(progressLine), [progressLine]);
+
+  useEffect(() => {
+    const promptOnLeave = (event: BeforeUnloadEvent) => {
+      if (!childRef.current) return;
+
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    const cleanup = () => {
+      const child = childRef.current;
+
+      if (!child) return;
+
+      childRef.current = null;
+      setDownloading(false);
+      void child.kill();
+    };
+
+    window.addEventListener("beforeunload", promptOnLeave);
+    window.addEventListener("pagehide", cleanup);
+
+    return () => {
+      window.removeEventListener("beforeunload", promptOnLeave);
+      window.removeEventListener("pagehide", cleanup);
+      cleanup();
+    };
+  }, [setDownloading]);
+
+  const cancelDownload = async () => {
+    const child = childRef.current;
+
+    if (!child) return;
+
+    childRef.current = null;
+    setDownloading(false);
+    setProgressLine("Process Terminated");
+
+    try {
+      await child.kill();
+    } catch {
+      // Ignore cleanup errors.
+    }
+  };
 
   const fetchInfo = async () => {
     if (!url.trim().startsWith("http")) {
@@ -152,6 +196,7 @@ export const SingleVideoTab = () => {
           disabled={isFetching || isDownloading || !url}
           className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 px-4 font-black text-[10px] tracking-widest rounded-none shadow-none"
         >
+          {JSON.stringify(isDownloading)}
           {isFetching ? (
             <Loader2 className="animate-spin w-4 h-4" />
           ) : (
@@ -169,7 +214,7 @@ export const SingleVideoTab = () => {
               className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
               alt="thumb"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent flex items-end p-6">
+            <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent flex items-end p-6">
               <div className="space-y-1">
                 <h3 className="font-black text-xl text-white line-clamp-1 tracking-tight uppercase">
                   {metadata.title}
@@ -317,7 +362,7 @@ export const SingleVideoTab = () => {
               {/* TERMINAL STYLE ALERT - Sharp edges, No shadow */}
               {isDownloading && (
                 <Alert className="bg-black border-primary/20 text-primary font-mono rounded-none border shadow-none animate-in zoom-in-95">
-                  <Terminal className="h-4 w-4 !text-primary animate-pulse" />
+                  <Terminal className="h-4 w-4 text-primary! animate-pulse" />
                   <AlertTitle className="text-[10px] tracking-[0.2em] font-black opacity-50 mb-4 uppercase">
                     VOID_SHELL_ACTIVE
                   </AlertTitle>
@@ -342,7 +387,7 @@ export const SingleVideoTab = () => {
                       variant="destructive"
                       size="sm"
                       className="w-full h-8 text-[10px] font-black tracking-widest uppercase hover:bg-red-600/20 hover:text-red-500 transition-all border border-red-500/20 rounded-none shadow-none"
-                      onClick={() => childRef.current?.kill()}
+                      onClick={() => void cancelDownload()}
                     >
                       ABORT_MISSION
                     </Button>

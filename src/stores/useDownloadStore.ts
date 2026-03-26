@@ -49,6 +49,23 @@ export const useDownloaderStore = create<DownloaderState>()(
       setDownloading: (isDownloading, currentProcessTitle = "") =>
         set({ isDownloading, currentProcessTitle }),
     }),
-    { name: "voidstream-config" },
+    {
+      name: "voidstream-config",
+      partialize: (state) => ({
+        folder: state.folder,
+        quality: state.quality,
+        isAudioOnly: state.isAudioOnly,
+        downloadCaptions: state.downloadCaptions,
+        autoCaptions: state.autoCaptions,
+        captionLanguages: state.captionLanguages,
+        captionFormat: state.captionFormat,
+      }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<DownloaderState>),
+        isDownloading: false,
+        currentProcessTitle: "",
+      }),
+    },
   ),
 );

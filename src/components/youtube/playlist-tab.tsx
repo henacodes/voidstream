@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Download, Loader2, Terminal, Music, Settings2 } from "lucide-react";
 import { Command, Child } from "@tauri-apps/plugin-shell";
 
@@ -64,6 +64,50 @@ export const PlaylistTab = () => {
     () => parsePercent(progressLine),
     [progressLine],
   );
+
+  useEffect(() => {
+    const promptOnLeave = (event: BeforeUnloadEvent) => {
+      if (!childRef.current) return;
+
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    const cleanup = () => {
+      const child = childRef.current;
+
+      if (!child) return;
+
+      childRef.current = null;
+      setDownloading(false);
+      void child.kill();
+    };
+
+    window.addEventListener("beforeunload", promptOnLeave);
+    window.addEventListener("pagehide", cleanup);
+
+    return () => {
+      window.removeEventListener("beforeunload", promptOnLeave);
+      window.removeEventListener("pagehide", cleanup);
+      cleanup();
+    };
+  }, [setDownloading]);
+
+  const cancelDownload = async () => {
+    const child = childRef.current;
+
+    if (!child) return;
+
+    childRef.current = null;
+    setDownloading(false);
+    setProgressLine("Process Terminated");
+
+    try {
+      await child.kill();
+    } catch {
+      // Ignore cleanup errors.
+    }
+  };
 
   const fetchPlaylist = async () => {
     if (!url.includes("list=")) {
@@ -188,7 +232,7 @@ export const PlaylistTab = () => {
                 className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
                 alt="cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent p-6 flex flex-col justify-end">
+              <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent p-6 flex flex-col justify-end">
                 <Badge className="w-fit mb-2 bg-primary/80 backdrop-blur-md font-black">
                   PLAYLIST
                 </Badge>
@@ -322,7 +366,7 @@ export const PlaylistTab = () => {
         {/* Terminal Progress Alert */}
         {isDownloading && (
           <Alert className="bg-black border-primary/20 text-primary font-mono  rounded-xl border">
-            <Terminal className="h-4 w-4 !text-primary animate-pulse" />
+            <Terminal className="h-4 w-4 text-primary! animate-pulse" />
             <AlertTitle className="text-[10px] tracking-[0.2em] font-black opacity-50 mb-4">
               VOID_SHELL_ACTIVE_QUEUE
             </AlertTitle>
@@ -344,7 +388,7 @@ export const PlaylistTab = () => {
                 variant="destructive"
                 size="sm"
                 className="w-full h-8 text-[10px] font-black uppercase tracking-widest border border-red-500/20"
-                onClick={() => childRef.current?.kill()}
+                onClick={() => void cancelDownload()}
               >
                 ABORT_MISSION
               </Button>
@@ -393,7 +437,7 @@ export const PlaylistTab = () => {
             )}
           </div>
 
-          <ScrollArea className="h-[580px]">
+          <ScrollArea className="h-145">
             <div className="p-3 space-y-2">
               {items.map((item, i) => (
                 <div
